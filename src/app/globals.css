@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 228, 228, 231;
+  --background-start-rgb: 10, 10, 15;
+  --background-end-rgb: 10, 10, 15;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+  min-height: 100vh;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #12121a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2e2e3e;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3e3e4e;
+}
+
+/* Table styles */
+.data-table {
+  @apply w-full text-sm;
+}
+
+.data-table th {
+  @apply text-left text-dark-text-muted font-medium py-2 px-3 border-b border-dark-border;
+}
+
+.data-table td {
+  @apply py-2 px-3 border-b border-dark-border/50;
+}
+
+.data-table tr:hover td {
+  @apply bg-dark-card/50;
+}
+
+/* Card styles */
+.card {
+  @apply bg-dark-card/30 border border-dark-border rounded-lg;
+}
+
+.card-header {
+  @apply px-4 py-3 border-b border-dark-border;
+}
+
+.card-body {
+  @apply p-4;
+}
+
+/* Status indicators */
+.status-dot {
+  @apply w-2 h-2 rounded-full inline-block mr-2;
+}
+
+.status-out {
+  @apply bg-red-500;
+}
+
+.status-critical {
+  @apply bg-orange-500;
+}
+
+.status-low {
+  @apply bg-yellow-500;
+}
+
+.status-normal {
+  @apply bg-green-500;
+}
+
+/* Loading animation */
+@keyframes pulse-opacity {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse-opacity {
+  animation: pulse-opacity 2s ease-in-out infinite;
+}
+
+/* Progress bar */
+.progress-bar {
+  @apply h-2 bg-dark-border rounded-full overflow-hidden;
+}
+
+.progress-fill {
+  @apply h-full rounded-full transition-all duration-500;
+}
