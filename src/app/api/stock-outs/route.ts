@@ -54,37 +54,47 @@ export async function GET(request: NextRequest) {
     const lowStock: LowStockItem[] = [];
 
     for (const dispensaryId of dispensaryIds) {
-      // Build query
-      let query = supabase
+      // Get location data
+      const { data: locations, error: locError } = await supabase
         .from('competitor_product_locations')
-        .select(`
-          dispensary_id,
-          product_id,
-          location_id,
-          location_name,
-          available_quantity,
-          stock_status,
-          regular_price,
-          updated_at,
-          competitor_products!inner (
-            product_name,
-            category,
-            brand,
-            size_display
-          )
-        `)
+        .select('dispensary_id, product_id, location_id, location_name, available_quantity, stock_status, regular_price, updated_at')
         .eq('dispensary_id', dispensaryId);
 
-      if (categoryFilter) {
-        query = query.eq('competitor_products.category', categoryFilter);
-      }
-
-      const { data: locations, error } = await query;
-
-      if (error) {
-        console.error(`[StockOuts] Error fetching ${dispensaryId}:`, error);
+      if (locError) {
+        console.error(`[StockOuts] Error fetching locations for ${dispensaryId}:`, locError);
         continue;
       }
+
+      // Get product data separately
+      let productQuery = supabase
+        .from('competitor_products')
+        .select('product_id, product_name, category, brand, size_display')
+        .eq('dispensary_id', dispensaryId);
+      
+      if (categoryFilter) {
+        productQuery = productQuery.eq('category', categoryFilter);
+      }
+
+      const { data: productData, error: prodError } = await productQuery;
+
+      if (prodError) {
+        console.error(`[StockOuts] Error fetching products for ${dispensaryId}:`, prodError);
+        continue;
+      }
+
+      // Create product lookup map
+      const productLookup = new Map<string, { product_name: string; category: string | null; brand: string | null; size_display: string | null }>();
+      for (const p of productData || []) {
+        productLookup.set(p.product_id, { 
+          product_name: p.product_name, 
+          category: p.category, 
+          brand: p.brand,
+          size_display: p.size_display
+        });
+      }
+
+      // Filter locations to only those with matching products (handles category filter)
+      const filteredLocations = (locations || []).filter(loc => productLookup.has(loc.product_id));
 
       // Group by product
       const productMap = new Map<string, {
@@ -100,9 +110,9 @@ export async function GET(request: NextRequest) {
         last_seen: string;
       }>();
 
-      for (const loc of locations || []) {
+      for (const loc of filteredLocations) {
         const productId = loc.product_id;
-        const product = loc.competitor_products as any;
+        const product = productLookup.get(productId);
         const qty = loc.available_quantity || 0;
         
         let productData = productMap.get(productId);

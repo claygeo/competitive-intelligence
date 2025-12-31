@@ -44,22 +44,45 @@ export async function GET(request: NextRequest) {
     const results: DispensaryInventory[] = [];
 
     for (const dispensaryId of dispensaryIds) {
-      // Get aggregated inventory by category
-      const { data: products, error } = await supabase
+      // Get location data
+      const { data: locations, error: locError } = await supabase
         .from('competitor_product_locations')
-        .select(`
-          product_id,
-          location_id,
-          available_quantity,
-          stock_status,
-          updated_at,
-          competitor_products!inner (
-            product_name,
-            category,
-            brand
-          )
-        `)
+        .select('product_id, location_id, available_quantity, stock_status, updated_at')
         .eq('dispensary_id', dispensaryId);
+
+      if (locError) {
+        console.error(`[Inventory] Error fetching locations for ${dispensaryId}:`, locError);
+        continue;
+      }
+
+      // Get product data separately
+      const { data: productData, error: prodError } = await supabase
+        .from('competitor_products')
+        .select('product_id, product_name, category, brand')
+        .eq('dispensary_id', dispensaryId);
+
+      if (prodError) {
+        console.error(`[Inventory] Error fetching products for ${dispensaryId}:`, prodError);
+        continue;
+      }
+
+      // Create product lookup map
+      const productMap = new Map<string, { product_name: string; category: string | null; brand: string | null }>();
+      for (const p of productData || []) {
+        productMap.set(p.product_id, { 
+          product_name: p.product_name, 
+          category: p.category, 
+          brand: p.brand 
+        });
+      }
+
+      // Merge the data
+      const products = (locations || []).map(loc => ({
+        ...loc,
+        competitor_products: productMap.get(loc.product_id) || { product_name: 'Unknown', category: null, brand: null }
+      }));
+
+      const error = null;
 
       if (error) {
         console.error(`[Inventory] Error fetching ${dispensaryId}:`, error);
